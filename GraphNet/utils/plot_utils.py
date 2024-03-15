@@ -75,11 +75,12 @@ def plot_acc(tacc, vacc, output=None):
     fig, ax = plt.subplots()
     x_vals = np.linspace(1, 20, 20)
     y_vals = [tacc, vacc]
-    ax.scatter(x_vals, y_vals[0], color=colors[0], label='train acc')
-    ax.scatter(x_vals, y_vals[1], color=colors[1], label='val acc')
+    ax.scatter(x_vals, y_vals[0], color=colors[0], alpha=0.8, label='train acc')
+    ax.scatter(x_vals, y_vals[1], color=colors[1], alpha=0.8, label='val acc')
     ax.legend()
     ax.set_xlabel('Epoch', fontsize=14)
     ax.set_ylabel('Accuracy', fontsize=14)
+    ax.grid()
     if output:
         plt.savefig(output)
 
@@ -90,6 +91,7 @@ def plot_loss(tloss, output=None):
     ax.scatter(x_vals, tloss, color=color, label='train loss')
     ax.set_xlabel('Epoch', fontsize=14)
     ax.set_ylabel('Train Loss', fontsize=14)
+    ax.grid()
     if output:
         plt.savefig(output)
 

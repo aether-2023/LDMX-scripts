@@ -80,7 +80,7 @@ class Ranger(Optimizer):
         super(Ranger, self).__setstate__(state)
 
 
-    def step(self, closure=None, avgloss=None, avgacc=None):
+    def step(self, closure=None):
         loss = None
         #note - below is commented out b/c I have other work that passes back the loss as a float, and thus not a callable closure.  
         #Uncomment if you need to use the actual closure...
@@ -163,7 +163,5 @@ class Ranger(Optimizer):
                     slow_p.add_(self.alpha, p.data - slow_p)  #(fast weights - slow weights) * alpha
                     p.data.copy_(slow_p)  #copy interpolated weights to RAdam param tensor
 
-        if avgloss and avgacc:
-            return loss, avgloss, avgacc
-        else:
-            return loss
+        
+        return loss

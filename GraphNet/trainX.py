@@ -275,7 +275,8 @@ def train(model, opt, scheduler, train_loader, dev):
             avgloss = (total_loss / num_batches)
             avgacc = (total_correct / count)
 
-    scheduler.step(avgloss=avgloss, avgacc=avgacc)
+    scheduler.step()
+    return avgloss, avgacc
 
 
 def evaluate(model, test_loader, dev, return_scores=False):
@@ -343,7 +344,7 @@ if training_mode:
     train_acc_list = []
     valid_acc_list = []
     for epoch in range(args.num_epochs):
-        _, train_loss, train_acc = train(model, opt, scheduler, train_loader, dev)
+        train_loss, train_acc = train(model, opt, scheduler, train_loader, dev)
 
         print('Epoch #%d Validating' % epoch)
         valid_acc = evaluate(model, val_loader, dev)
