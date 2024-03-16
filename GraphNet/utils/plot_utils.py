@@ -81,6 +81,7 @@ def plot_acc(tacc, vacc, output=None):
     ax.set_xlabel('Epoch', fontsize=14)
     ax.set_ylabel('Accuracy', fontsize=14)
     ax.grid()
+    ax2.set_xticks(range(2, 21, 2))
     if output:
         plt.savefig(output)
 
@@ -92,6 +93,7 @@ def plot_loss(tloss, output=None):
     ax.set_xlabel('Epoch', fontsize=14)
     ax.set_ylabel('Train Loss', fontsize=14)
     ax.grid()
+    ax2.set_xticks(range(2, 21, 2))
     if output:
         plt.savefig(output)
 
