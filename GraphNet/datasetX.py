@@ -196,7 +196,7 @@ class XCalHitsDataset(Dataset):
         # Hard-coded; not worried about generalizing atm
         #return 5
         #return 4 # removed layer id
-        if args.extended:
+        if self.extended:
             return 6 # restored layer id, added strip id
         else:
             return 5
@@ -360,13 +360,13 @@ class XCalHitsDataset(Dataset):
         # For each event, look through all hits.
         # - Determine whether hit falls inside either the e or p RoCs
         # - If so, fill corresp xyzlayer, energy, eid lists...
-        x_          = np.zeros((self.nRegions, 150), dtype='float64')
-        y_          = np.zeros((self.nRegions, 150), dtype='float64')
-        z_          = np.zeros((self.nRegions, 150), dtype='float64')
-        log_energy_ = np.zeros((self.nRegions, 150), dtype='float64')
-        layer_id_   = np.zeros((self.nRegions, 150), dtype='float64')
+        x_          = np.zeros((self.nRegions, 300), dtype='float64')
+        y_          = np.zeros((self.nRegions, 300), dtype='float64')
+        z_          = np.zeros((self.nRegions, 300), dtype='float64')
+        log_energy_ = np.zeros((self.nRegions, 300), dtype='float64')
+        layer_id_   = np.zeros((self.nRegions, 300), dtype='float64')
         if self.extended:
-            strip_id_   = np.zeros((self.nRegions, 150), dtype='float64')
+            strip_id_   = np.zeros((self.nRegions, 300), dtype='float64')
 
         #regionIndices = [0, 0, 0]  # Indices of last hit added to feature arrays
 
@@ -452,7 +452,7 @@ class XCalHitsDataset(Dataset):
                     else: # else E<0
                         log_energy_[r][j] = -1  # Note:  E<0 is very uncommon, so -1 is okay to round to.
                 
-        if self.extended
+        if self.extended:
             for k in range(len(h_energy)):
                 
                 hcal_regions = []

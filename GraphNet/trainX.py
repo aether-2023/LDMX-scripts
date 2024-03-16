@@ -395,6 +395,7 @@ test_extra_labels = test_data.extra_labels
 
 info_dict = {'model_name':args.network,
              'model_params': {'conv_params':conv_params, 'fc_params':fc_params},
+             'initial LR': args.start_lr,
              'date': str(datetime.date.today()),
              'model_path': args.load_model_path,
              'siglist': siglist,
