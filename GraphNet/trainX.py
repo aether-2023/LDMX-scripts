@@ -413,7 +413,7 @@ for k in siglist:
         mass = '%d MeV' % k
         fpr, tpr, auc, acc = plotROC(test_preds, test_labels, sample_weight=np.logical_or(test_extra_labels == 0, test_extra_labels == k),
                                      sig_eff=presel_eff[k], bkg_eff=presel_eff[0],
-                                     output=os.path.splitext(args.test_output_path)[0] + 'ROC_%s.pdf' % mass, label=mass, xlim=[1e-6, .01], ylim=[0, 1], logx=True)
+                                     output=os.path.splitext(args.test_output_path)[0] + 'ROC_%s.pdf' % mass, label=mass, xlim=[1e-7, .01], ylim=[0, 1], logx=True)
         info_dict[mass] = {'auc-presel': auc,
                            'acc-presel': acc,
                            'effs': get_signal_effs(fpr, tpr)

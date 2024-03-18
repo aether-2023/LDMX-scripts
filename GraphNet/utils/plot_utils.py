@@ -71,7 +71,7 @@ def get_signal_effs(fpr, tpr, mistags=[1e-3, 1e-4, 1e-5, 1e-6]):
     return outputs
 
 def plot_acc(tacc, vacc, output=None):
-    colors = ['#14AD0C', '#FF8F13'] # [orange, blue]
+    colors = ['#14AD0C', '#FF8F13'] # [green, orange]
     fig, ax = plt.subplots()
     x_vals = np.linspace(1, 20, 20)
     y_vals = [tacc, vacc]
