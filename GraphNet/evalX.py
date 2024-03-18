@@ -51,6 +51,7 @@ if args.save_extra:
         'recoilX_',
         'recoilY_',
         'TargetSPRecoilE_pt',
+        'maxPE'
         ]
 
     # NEW:  EcalVeto branches must be handled separately in v2.2.1+.

@@ -71,15 +71,17 @@ def get_signal_effs(fpr, tpr, mistags=[1e-3, 1e-4, 1e-5, 1e-6]):
     return outputs
 
 def plot_acc(tacc, vacc, output=None):
-    colors = ['#14AD0C', '#FF8F13'] # [orange, blue]
+    colors = ['#14AD0C', '#FF8F13'] # [green, orange]
     fig, ax = plt.subplots()
     x_vals = np.linspace(1, 20, 20)
     y_vals = [tacc, vacc]
-    ax.scatter(x_vals, y_vals[0], color=colors[0], label='train acc')
-    ax.scatter(x_vals, y_vals[1], color=colors[1], label='val acc')
+    ax.scatter(x_vals, y_vals[0], color=colors[0], alpha=0.8, label='train acc')
+    ax.scatter(x_vals, y_vals[1], color=colors[1], alpha=0.8, label='val acc')
     ax.legend()
     ax.set_xlabel('Epoch', fontsize=14)
     ax.set_ylabel('Accuracy', fontsize=14)
+    ax.grid()
+    ax2.set_xticks(range(2, 21, 2))
     if output:
         plt.savefig(output)
 
@@ -90,6 +92,8 @@ def plot_loss(tloss, output=None):
     ax.scatter(x_vals, tloss, color=color, label='train loss')
     ax.set_xlabel('Epoch', fontsize=14)
     ax.set_ylabel('Train Loss', fontsize=14)
+    ax.grid()
+    ax2.set_xticks(range(2, 21, 2))
     if output:
         plt.savefig(output)
 
