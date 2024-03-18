@@ -311,7 +311,7 @@ def evaluate(model, test_loader, dev, return_scores=False):
                     'AvgAcc': '%.5f' % (total_correct / count)})
 
     if return_scores:
-        return np.concatenate(scores)
+        return np.concatenate(scores), (total_correct / count)
     else:
         return total_correct / count
 
@@ -347,11 +347,11 @@ if training_mode:
         train_loss, train_acc = train(model, opt, scheduler, train_loader, dev)
 
         print('Epoch #%d Validating' % epoch)
-        valid_acc = evaluate(model, val_loader, dev)
-        if valid_acc > best_valid_acc:
-            best_valid_acc = valid_acc
+        disc_arr, valid_acc = evaluate(model, val_loader, dev, return_scores=True)
         if train_acc > best_train_acc:
             best_train_acc = train_acc
+        if valid_acc > best_valid_acc:
+            best_valid_acc = valid_acc
             if args.save_model_path:
                 dirname = os.path.dirname(args.save_model_path)
                 if dirname and not os.path.exists(dirname):
@@ -365,6 +365,13 @@ if training_mode:
         train_loss_list.append(train_loss)
         train_acc_list.append(train_acc)
         valid_acc_list.append(valid_acc)
+        # check for saturated scores
+        disc_arr = disc_arr[:,1]
+        total_scores = len(disc_arr)
+        sat_one = len(disc_arr[disc_arr==1])
+        sat_zero = len(disc_arr[disc_arr<1e-9])
+        print(f"Fraction of scores saturated at one: {sat_one/total_scores}")
+        print(f"Fraction of scores saturated below 1e-9: {sat_zero/total_scores}")
 
         gc.collect()
         torch.cuda.empty_cache()
@@ -419,14 +426,15 @@ for k in siglist:
                            'effs': get_signal_effs(fpr, tpr)
                            }
 
-plot_acc(tacc=train_acc_list, vacc=valid_acc_list, output=os.path.splitext(args.test_output_path)[0] + 'acc_plot.pdf')
-plot_loss(tloss=train_loss_list, output=os.path.splitext(args.test_output_path)[0] + 'loss_plot.pdf')
+if training_mode:
+    plot_acc(tacc=train_acc_list, vacc=valid_acc_list, output=os.path.splitext(args.test_output_path)[0] + 'acc_plot.pdf')
+    plot_loss(tloss=train_loss_list, output=os.path.splitext(args.test_output_path)[0] + 'loss_plot.pdf')
 
-# save train accuracy, validation accuracy, and train loss in a pickle file (can custom plot later)
-import pickle
-df_dict = {'train_acc': train_acc_list, 'val_acc': valid_acc_list, 'train_loss': train_loss_list}
-with open(os.path.splitext(args.test_output_path)[0] + 'df.pkl', 'wb') as pklf:
-    pickle.dump(df_dict, pklf)
+    # save train accuracy, validation accuracy, and train loss in a pickle file (can custom plot later)
+    import pickle
+    df_dict = {'train_acc': train_acc_list, 'val_acc': valid_acc_list, 'train_loss': train_loss_list}
+    with open(os.path.splitext(args.test_output_path)[0] + 'df.pkl', 'wb') as pklf:
+        pickle.dump(df_dict, pklf)
 
 print(' === Summary ===')
 for k in info_dict:
