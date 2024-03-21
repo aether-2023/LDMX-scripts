@@ -267,10 +267,10 @@ def train(model, opt, scheduler, train_loader, dev):
             total_correct += correct
 
             tq.set_postfix({
-                'Loss': '%.5f' % loss,
-                'AvgLoss': '%.5f' % (total_loss / num_batches),
-                'Acc': '%.5f' % (correct / num_examples),
-                'AvgAcc': '%.5f' % (total_correct / count)})
+                'Loss': '%.7f' % loss,
+                'AvgLoss': '%.7f' % (total_loss / num_batches),
+                'Acc': '%.7f' % (correct / num_examples),
+                'AvgAcc': '%.7f' % (total_correct / count)})
 
             avgloss = (total_loss / num_batches)
             avgacc = (total_correct / count)
@@ -307,8 +307,8 @@ def evaluate(model, test_loader, dev, return_scores=False):
                 count += num_examples
 
                 tq.set_postfix({
-                    'Acc': '%.5f' % (correct / num_examples),
-                    'AvgAcc': '%.5f' % (total_correct / count)})
+                    'Acc': '%.7f' % (correct / num_examples),
+                    'AvgAcc': '%.7f' % (total_correct / count)})
 
     if return_scores:
         return np.concatenate(scores), (total_correct / count)
@@ -358,10 +358,10 @@ if training_mode:
                     os.makedirs(dirname)
                 torch.save(model.state_dict(), args.save_model_path + '_state.pt')
                 torch.save(model, args.save_model_path + '_full.pt')
-        torch.save(model.state_dict(), args.save_model_path + '_state_epoch-%d_acc-%.4f.pt' % (epoch, valid_acc))
-        print('Current train loss: %.5f' % (train_loss))
-        print('Current train acc: %.5f (best: %.5f)' % (train_acc, best_train_acc))
-        print('Current validation acc: %.5f (best: %.5f)' % (valid_acc, best_valid_acc))
+        torch.save(model.state_dict(), args.save_model_path + '_state_epoch-%d_acc-%.6f.pt' % (epoch, valid_acc))
+        print('Current train loss: %.7f' % (train_loss))
+        print('Current train acc: %.7f (best: %.7f)' % (train_acc, best_train_acc))
+        print('Current validation acc: %.7f (best: %.7f)' % (valid_acc, best_valid_acc))
         train_loss_list.append(train_loss)
         train_acc_list.append(train_acc)
         valid_acc_list.append(valid_acc)
@@ -396,7 +396,7 @@ path, name = os.path.split(args.test_output_path)
 if path and not os.path.exists(path):
     os.makedirs(path)
 
-test_preds = evaluate(model, test_loader, dev, return_scores=True)
+test_preds, _ = evaluate(model, test_loader, dev, return_scores=True)
 test_labels = test_data.label
 test_extra_labels = test_data.extra_labels
 
