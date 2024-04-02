@@ -23,10 +23,8 @@ torch.set_default_dtype(torch.float64)
 # this will simply change E_beam and eventually RoC (new RoC for 8gev not added yet)...set to False for 4gev
 beam_8gev = True 
 
-# enable fiducial cut
+# fiducial cut, filter out oncell hits, determined by projection from scoringPlane to ecalFace projection
 fiducial_mode = True
-
-# Load relevant parameters for fiducial cut
 scoringPlaneZ = 239.9985
 ecalFaceZ = 247.932
 cell_radius = 5.0
@@ -120,9 +118,6 @@ class XCalHitsDataset(Dataset):
         # load cell map (for calculating xyz+layer from hit IDs)
         self._load_cellMap(version=detector_version)
         self.detector_version = detector_version
-        # load fiducial cut
-        if fiducial_mode:
-            self.fiducial_cut_flags = self.compute_fiducial_cut()
         # Specify the two branches necessary for all ParticleNet features:  (xyz+layer+energy)
         self._id_branch = 'id_rec_'  # load from 'EcalRecHits_v12.id_'
         self._pos_branch = '{}pos_rec_'
@@ -185,6 +180,10 @@ class XCalHitsDataset(Dataset):
 
                 f_event = start
                 while num_loaded_events < max_events and f_event < stop:
+                    # append fiducial check flags for each loaded event
+                    if fiducial_mode and self._compute_fiducial_cut(f_event):
+                        f_event += 1
+                        pass
                     self.event_list.append([extra_label if extra_label <= 1 else 1, fp, f_event])
                     self.extra_labels.append(extra_label)
                     num_loaded_events += 1
@@ -220,10 +219,6 @@ class XCalHitsDataset(Dataset):
         # On-demand, read event file_index from filename and process it
         # By assumption, events have already been preselected!
         # returns:  label (sig/bkg), coords (xyz), features (xyzLE)
-
-        # skip on cell hits
-        if fiducial_mode and self.fiducial_cut_flags[i]:
-            return None
 
         # Get info on event location from event_list:
         label, filename, file_index = self.event_list[i]
@@ -336,6 +331,7 @@ class XCalHitsDataset(Dataset):
             self.enorm_sp = np.array((-999,-999,-999))
             self.pnorm_sp = np.array((-999,-999,-999))
             self.ptraj_sp = np.array((-999,-999,-999))
+
 
 
     def _read_event(self):
@@ -540,7 +536,7 @@ class XCalHitsDataset(Dataset):
         if version=='v13' or version=='v14':
             zd = np.loadtxt('data/%s/layer.txt' % version)
             self._layerZs = {round(zd[i]):i for i in range(len(zd))}
-        if fiducial_mode:
+        if fiducial_mode: # need cellMap for v14 non-fiducial study
             for i, x, y in np.loadtxt('data/%s/cellmodule.txt' % version):
                 self._cellMap[i] = (x, y)
             self._cells = np.array(list(self._cellMap.values()))
@@ -568,56 +564,52 @@ class XCalHitsDataset(Dataset):
         return (x, y, z), layer
 
     def _parse_hid(self, hid):
-         SECTION_MASK = 0x7  # space for up to 7 sections
-         SECTION_SHIFT = 18
-         LAYER_MASK = 0xFF  # space for up to 255 layers
-         LAYER_SHIFT = 10
-         STRIP_MASK = 0xFF  # space for 255 strips/layer
-         STRIP_SHIFT = 0 
+        SECTION_MASK = 0x7  # space for up to 7 sections
+        SECTION_SHIFT = 18
+        LAYER_MASK = 0xFF  # space for up to 255 layers
+        LAYER_SHIFT = 10
+        STRIP_MASK = 0xFF  # space for 255 strips/layer
+        STRIP_SHIFT = 0 
 
-         hcal_section = np.bitwise_and(np.right_shift(hid.astype(np.uint64), SECTION_SHIFT), SECTION_MASK)
-         hcal_layer = np.bitwise_and(np.right_shift(hid.astype(np.uint64), LAYER_SHIFT), LAYER_MASK)
-         hcal_strip = np.bitwise_and(np.right_shift(hid.astype(np.uint64), STRIP_SHIFT), STRIP_MASK)
+        hcal_section = np.bitwise_and(np.right_shift(hid.astype(np.uint64), SECTION_SHIFT), SECTION_MASK)
+        hcal_layer = np.bitwise_and(np.right_shift(hid.astype(np.uint64), LAYER_SHIFT), LAYER_MASK)
+        hcal_strip = np.bitwise_and(np.right_shift(hid.astype(np.uint64), STRIP_SHIFT), STRIP_MASK)
 
-         return (hcal_section, hcal_layer, hcal_strip)
+        return (hcal_section, hcal_layer, hcal_strip)
 
+    
     # Calculate projection for fiducial test
-    def projection(Recoilx, Recoily, Recoilz, RPx, RPy, RPz, HitZ):
+    def _projection(self, Recoilx, Recoily, Recoilz, RPx, RPy, RPz, HitZ):
         x_final = Recoilx + RPx/RPz*(HitZ - Recoilz) if RPz != 0 else 0
         y_final = Recoily + RPy/RPz*(HitZ - Recoilz) if RPy != 0 else 0
         return (x_final, y_final)
-
+    
     # Calculate 2D Euclidean distance between cell center and hit
-    def dist(self, cell, fXY):
+    def _dist(self, cell, fXY):
         return np.sqrt((cell[0] - fXY[0])**2 + (cell[1] - fXY[1])**2)
 
-    def compute_fiducial_cut(self):
+    # Fiducial check, True for oncell and False for offcell
+    def _compute_fiducial_cut(self, eventIndex):
         # load relevant leaves
+        self.ttree.GetEntry(eventIndex)
         recoilX_leaf = self.ttree.GetLeaf('recoilX_')
         recoilY_leaf = self.ttree.GetLeaf('recoilY_')
         recoilPx_leaf = self.ttree.GetLeaf('recoilPx_')
         recoilPy_leaf = self.ttree.GetLeaf('recoilPy_')
         recoilPz_leaf = self.ttree.GetLeaf('recoilPz_')
-        recoilX = [recoilX_leaf.GetValue(i) for i in range(recoilX_leaf.GetLen())]
-        recoilY = [recoilY_leaf.GetValue(i) for i in range(recoilY_leaf.GetLen())]
-        recoilPx = [recoilPx_leaf.GetValue(i) for i in range(recoilPx_leaf.GetLen())]
-        recoilPy = [recoilPy_leaf.GetValue(i) for i in range(recoilPy_leaf.GetLen())]
-        recoilPz = [recoilPz_leaf.GetValue(i) for i in range(recoilPz_leaf.GetLen())]
 
-        # compute cut array
-        N = len(recoilX)
-        f_cut = np.zeros(N, dtype=bool)
-        for i in range(N):
-            fiducial = False
-            fXY = self.projection(recoilX[i], recoilY[i], scoringPlaneZ, recoilPx[i], recoilPy[i], recoilPz[i], ecalFaceZ)
-            if not all(val == -9999 for val in [recoilX[i], recoilY[i], recoilPx[i], recoilPy[i], recoilPz[i]]):
-                for cell in self._cells:
-                    celldis = self.dist(cell, fXY)
-                    if celldis <= cell_radius:
-                        fiducial = True
-                        break
-            f_cut[i] = fiducial
-        return f_cut
+        # compute cut flags
+        fiducial_cut_flag = False #0
+        fXY = self._projection(recoilX_leaf.GetValue(), recoilY_leaf.GetValue(), self.scoringPlaneZ, 
+                                recoilPx_leaf.GetValue(), recoilPy_leaf.GetValue(), recoilPz_leaf.GetValue(), self.ecalFaceZ)
+        if not all(val == -9999 for val in [recoilX_leaf.GetValue(), recoilY_leaf.GetValue(), 
+                                            recoilPx_leaf.GetValue(), recoilPy_leaf.GetValue(), recoilPz_leaf.GetValue()]):
+            for cell in self._cells:
+                celldis = self._dist(cell, fXY)
+                if celldis <= self.cell_radius:
+                    fiducial_cut_flag = True #1
+                    break
+        return fiducial_cut_flag
 
 
 class _SimpleCustomBatch:
