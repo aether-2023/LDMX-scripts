@@ -183,11 +183,11 @@ class XCalHitsDataset(Dataset):
                     # append fiducial check flags for each loaded event
                     if fiducial_mode and self._compute_fiducial_cut(ttree, f_event):
                         f_event += 1
-                        pass
-                    self.event_list.append([extra_label if extra_label <= 1 else 1, fp, f_event])
-                    self.extra_labels.append(extra_label)
-                    num_loaded_events += 1
-                    f_event += 1
+                    else: 
+                        self.event_list.append([extra_label if extra_label <= 1 else 1, fp, f_event])
+                        self.extra_labels.append(extra_label)
+                        num_loaded_events += 1
+                        f_event += 1
                  #print("      {} events in file, {} total for current mass".format(f_event, num_loaded_events))
             print("   Loaded m={}:  using {} events".format(extra_label, num_loaded_events))
 
@@ -600,13 +600,13 @@ class XCalHitsDataset(Dataset):
 
         # compute cut flags
         fiducial_cut_flag = False #0
-        fXY = self._projection(recoilX_leaf.GetValue(), recoilY_leaf.GetValue(), self.scoringPlaneZ, 
-                                recoilPx_leaf.GetValue(), recoilPy_leaf.GetValue(), recoilPz_leaf.GetValue(), self.ecalFaceZ)
+        fXY = self._projection(recoilX_leaf.GetValue(), recoilY_leaf.GetValue(), scoringPlaneZ, 
+                                recoilPx_leaf.GetValue(), recoilPy_leaf.GetValue(), recoilPz_leaf.GetValue(), ecalFaceZ)
         if not all(val == -9999 for val in [recoilX_leaf.GetValue(), recoilY_leaf.GetValue(), 
                                             recoilPx_leaf.GetValue(), recoilPy_leaf.GetValue(), recoilPz_leaf.GetValue()]):
             for cell in self._cells:
                 celldis = self._dist(cell, fXY)
-                if celldis <= self.cell_radius:
+                if celldis <= cell_radius:
                     fiducial_cut_flag = True #1
                     break
         return fiducial_cut_flag
