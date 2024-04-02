@@ -181,7 +181,7 @@ class XCalHitsDataset(Dataset):
                 f_event = start
                 while num_loaded_events < max_events and f_event < stop:
                     # append fiducial check flags for each loaded event
-                    if fiducial_mode and self._compute_fiducial_cut(f_event):
+                    if fiducial_mode and self._compute_fiducial_cut(ttree, f_event):
                         f_event += 1
                         pass
                     self.event_list.append([extra_label if extra_label <= 1 else 1, fp, f_event])
@@ -589,14 +589,14 @@ class XCalHitsDataset(Dataset):
         return np.sqrt((cell[0] - fXY[0])**2 + (cell[1] - fXY[1])**2)
 
     # Fiducial check, True for oncell and False for offcell
-    def _compute_fiducial_cut(self, eventIndex):
+    def _compute_fiducial_cut(self, ttree, eventIndex):
         # load relevant leaves
-        self.ttree.GetEntry(eventIndex)
-        recoilX_leaf = self.ttree.GetLeaf('recoilX_')
-        recoilY_leaf = self.ttree.GetLeaf('recoilY_')
-        recoilPx_leaf = self.ttree.GetLeaf('recoilPx_')
-        recoilPy_leaf = self.ttree.GetLeaf('recoilPy_')
-        recoilPz_leaf = self.ttree.GetLeaf('recoilPz_')
+        ttree.GetEntry(eventIndex)
+        recoilX_leaf = ttree.GetLeaf('recoilX_')
+        recoilY_leaf = ttree.GetLeaf('recoilY_')
+        recoilPx_leaf = ttree.GetLeaf('recoilPx_')
+        recoilPy_leaf = ttree.GetLeaf('recoilPy_')
+        recoilPz_leaf = ttree.GetLeaf('recoilPz_')
 
         # compute cut flags
         fiducial_cut_flag = False #0
