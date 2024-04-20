@@ -183,6 +183,7 @@ class XCalHitsDataset(Dataset):
                 while num_loaded_events < max_events and f_event < stop:
                     # append fiducial check flags for each loaded event
                     if fiducial_mode and self._compute_fiducial_cut(ttree, f_event):
+                        # skip fiducial events
                         f_event += 1
                         fiducial_counter += 1
                     else: 
@@ -192,7 +193,7 @@ class XCalHitsDataset(Dataset):
                         f_event += 1
                  #print("      {} events in file, {} total for current mass".format(f_event, num_loaded_events))
             print("   Loaded m={}:  using {} events".format(extra_label, num_loaded_events))
-            print("   Fiducial events: {}".format(fiducial_counter))
+            print("   Fiducial events (skipped): {}".format(fiducial_counter))
 
         self.extra_labels = np.array(self.extra_labels)
         self.label = np.array([1 if l > 0 else 0 for l in self.extra_labels])  # 1 if sig, 0 if bkg
@@ -591,7 +592,7 @@ class XCalHitsDataset(Dataset):
     def _dist(self, cell, fXY):
         return np.sqrt((cell[0] - fXY[0])**2 + (cell[1] - fXY[1])**2)
 
-    # Fiducial check, True for oncell and False for offcell
+    # Fiducial check, True for on-cell and False for off-cell
     def _compute_fiducial_cut(self, ttree, eventIndex):
         # load relevant leaves
         ttree.GetEntry(eventIndex)
@@ -603,22 +604,27 @@ class XCalHitsDataset(Dataset):
         py_tsp_leaf = ttree.GetLeaf('py_tsp_')
         pz_tsp_leaf = ttree.GetLeaf('pz_tsp_')
         
+        # define fiducial cut flag, True for on-cell, False for off-cell
+        fiducial_cut_flag = False #0
+
         # find electrons
         tsp_electron = []
         for i in range (pdgID_tsp_leaf.GetLen()):
             if pdgID_tsp_leaf.GetValue(i) == 11:
                 # electron found
                 tsp_electron.append(i)
+        # in case of no electron presented
         if len(tsp_electron) == 0:
-            print("no electron")
+            print("This event contains no electron, tagged as fiducial.")
+            fiducial_cut_flag = True
+            return fiducial_cut_flag
         # find the recoil electron
         pz_max = tsp_electron[0]
         for particle in tsp_electron:
             if pz_tsp_leaf.GetValue(particle) > pz_tsp_leaf.GetValue(pz_max):
                 pz_max = particle
-        
+    
         # compute cut flags
-        fiducial_cut_flag = False #0
         fXY = self._projection(x_tsp_leaf.GetValue(pz_max), y_tsp_leaf.GetValue(pz_max), z_tsp_leaf.GetValue(pz_max), 
                                 px_tsp_leaf.GetValue(pz_max), py_tsp_leaf.GetValue(pz_max), pz_tsp_leaf.GetValue(pz_max), ecalFaceZ)
         if not all(val == -9999 for val in [x_tsp_leaf.GetValue(pz_max), y_tsp_leaf.GetValue(pz_max), z_tsp_leaf.GetValue(pz_max), 
