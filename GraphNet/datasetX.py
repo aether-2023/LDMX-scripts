@@ -169,6 +169,7 @@ class XCalHitsDataset(Dataset):
                 max_events = 1e8  # Unrealistically large so it never constrains the results
             num_loaded_events = 0  # Number of events so far for this mass
             #print("   Filling for m={}".format(extra_label))
+            fiducial_counter = 0
             for fp in glob.glob(filepath):
                 # For each file, check the number of events, then add to event_list accordingly
                 if num_loaded_events == max_events:  break
@@ -183,6 +184,7 @@ class XCalHitsDataset(Dataset):
                     # append fiducial check flags for each loaded event
                     if fiducial_mode and self._compute_fiducial_cut(ttree, f_event):
                         f_event += 1
+                        fiducial_counter += 1
                     else: 
                         self.event_list.append([extra_label if extra_label <= 1 else 1, fp, f_event])
                         self.extra_labels.append(extra_label)
@@ -190,6 +192,7 @@ class XCalHitsDataset(Dataset):
                         f_event += 1
                  #print("      {} events in file, {} total for current mass".format(f_event, num_loaded_events))
             print("   Loaded m={}:  using {} events".format(extra_label, num_loaded_events))
+            print("   Fiducial events: {}".format(fiducial_counter))
 
         self.extra_labels = np.array(self.extra_labels)
         self.label = np.array([1 if l > 0 else 0 for l in self.extra_labels])  # 1 if sig, 0 if bkg
@@ -592,18 +595,34 @@ class XCalHitsDataset(Dataset):
     def _compute_fiducial_cut(self, ttree, eventIndex):
         # load relevant leaves
         ttree.GetEntry(eventIndex)
-        recoilX_leaf = ttree.GetLeaf('recoilX_')
-        recoilY_leaf = ttree.GetLeaf('recoilY_')
-        recoilPx_leaf = ttree.GetLeaf('recoilPx_')
-        recoilPy_leaf = ttree.GetLeaf('recoilPy_')
-        recoilPz_leaf = ttree.GetLeaf('recoilPz_')
-
+        pdgID_tsp_leaf = ttree.GetLeaf('pdgID_tsp_')
+        x_tsp_leaf = ttree.GetLeaf('x_tsp_')
+        y_tsp_leaf = ttree.GetLeaf('y_tsp_')
+        z_tsp_leaf = ttree.GetLeaf('z_tsp_')
+        px_tsp_leaf = ttree.GetLeaf('px_tsp_')
+        py_tsp_leaf = ttree.GetLeaf('py_tsp_')
+        pz_tsp_leaf = ttree.GetLeaf('pz_tsp_')
+        
+        # find electrons
+        tsp_electron = []
+        for i in range (pdgID_tsp_leaf.GetLen()):
+            if pdgID_tsp_leaf.GetValue(i) == 11:
+                # electron found
+                tsp_electron.append(i)
+        if len(tsp_electron) == 0:
+            print("no electron")
+        # find the recoil electron
+        pz_max = tsp_electron[0]
+        for particle in tsp_electron:
+            if pz_tsp_leaf.GetValue(particle) > pz_tsp_leaf.GetValue(pz_max):
+                pz_max = particle
+        
         # compute cut flags
         fiducial_cut_flag = False #0
-        fXY = self._projection(recoilX_leaf.GetValue(), recoilY_leaf.GetValue(), scoringPlaneZ, 
-                                recoilPx_leaf.GetValue(), recoilPy_leaf.GetValue(), recoilPz_leaf.GetValue(), ecalFaceZ)
-        if not all(val == -9999 for val in [recoilX_leaf.GetValue(), recoilY_leaf.GetValue(), 
-                                            recoilPx_leaf.GetValue(), recoilPy_leaf.GetValue(), recoilPz_leaf.GetValue()]):
+        fXY = self._projection(x_tsp_leaf.GetValue(pz_max), y_tsp_leaf.GetValue(pz_max), z_tsp_leaf.GetValue(pz_max), 
+                                px_tsp_leaf.GetValue(pz_max), py_tsp_leaf.GetValue(pz_max), pz_tsp_leaf.GetValue(pz_max), ecalFaceZ)
+        if not all(val == -9999 for val in [x_tsp_leaf.GetValue(pz_max), y_tsp_leaf.GetValue(pz_max), z_tsp_leaf.GetValue(pz_max), 
+                                            px_tsp_leaf.GetValue(pz_max), py_tsp_leaf.GetValue(pz_max), pz_tsp_leaf.GetValue(pz_max)]):
             for cell in self._cells:
                 celldis = self._dist(cell, fXY)
                 if celldis <= cell_radius:
